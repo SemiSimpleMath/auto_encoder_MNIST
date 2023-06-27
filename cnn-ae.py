@@ -1,21 +1,17 @@
 import gzip
-import pickle
 import os
+import pickle
 import random
-
-import torch
+import matplotlib.pyplot as plt
+import numpy as np
 import torch.nn as nn
 from torch import tensor
-import torch.nn.functional as F
-import numpy as np
 from torch.utils.data import DataLoader, RandomSampler, TensorDataset
-import matplotlib.pyplot as plt
-import pandas as pd
-from sklearn.decomposition import PCA as sklearnPCA, PCA
+from sklearn.decomposition import PCA
+import torch
 
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 torch.manual_seed(0)
-
 
 """
 This is an mnist auto-encoder.  The purpose is to visualize how ordinary auto-encoders have a latent
@@ -43,11 +39,11 @@ def load_mnist():
     return x_train, y_train, x_valid, y_valid
 
 
-
 def set_data_filters(f, train_data, target_data):
     train_filter = np.isin(target_data, f)
 
     return train_data[train_filter], target_data[train_filter]
+
 
 class ConvAutoencoder(nn.Module):
     def __init__(self, in_channels, out_channels, kernel_size, stride):
@@ -84,16 +80,12 @@ class ConvAutoencoder(nn.Module):
         return x
 
 
-
-
 class Dataset:
     def __init__(self, x, y): self.x, self.y = x, y
+
     def __len__(self): return len(self.x)
+
     def __getitem__(self, i): return self.x[i], self.y[i]
-
-
-from sklearn.decomposition import PCA
-import torch
 
 class LatentSpaceVisualizer:
     def __init__(self, encoder, dataloader):
@@ -114,11 +106,10 @@ class LatentSpaceVisualizer:
                 x, y = batch
                 # x = x.view(x.size(0), -1)  # We don't need to flatten anymore
                 latent_vectors = self.encoder(x)
-                encoded_samples.append((latent_vectors.view(latent_vectors.size(0), -1).cpu().numpy(), y.cpu().numpy()))  # Flatten the latent vectors
+                encoded_samples.append((latent_vectors.view(latent_vectors.size(0), -1).cpu().numpy(),
+                                        y.cpu().numpy()))  # Flatten the latent vectors
         self.encoded_samples = encoded_samples
         print(f"Encoded samples: {len(self.encoded_samples)}")
-
-
 
     def apply_pca(self):
         X = np.concatenate([x for x, y in self.encoded_samples])
@@ -151,6 +142,7 @@ def display_random_training_image(x_train, model):
     plt.imshow(random_model_image_for_display)
     plt.show()
 
+
 def train(model, opt, dl, num_epochs, bs):
     model.train()
     print(f"training for {num_epochs}")
@@ -174,7 +166,6 @@ def train(model, opt, dl, num_epochs, bs):
                 running_loss = 0.0
 
 
-
 def convert_model_output_to_img(output):
     output = output.reshape(28, 28).detach().numpy()
     return output
@@ -183,6 +174,7 @@ def convert_model_output_to_img(output):
 def display_img(img):
     plt.imshow(img)
     plt.show()
+
 
 def plot_input_output_pairs(model, input_data, num_pairs=5):
     # Select random indices from the input data
@@ -219,14 +211,15 @@ def plot_input_output_pairs(model, input_data, num_pairs=5):
     plt.tight_layout()
     plt.show()
 
+
 def save_model(model, filename):
     """
     Saves the model to the specified filename.
     """
     torch.save(model.state_dict(), filename)
 
-def main():
 
+def main():
     x_train, y_train, x_valid, y_valid = load_mnist()
 
     # Set here what digits you want to plot.  Plotting more than
@@ -242,7 +235,6 @@ def main():
     kernel_size = 3  # You can adjust this number
     stride = 1  # You can adjust this number
     model = ConvAutoencoder(in_channels, out_channels, kernel_size, stride)
-
 
     print(model)
 
@@ -289,10 +281,5 @@ def main():
     num_pairs = 5
     plot_input_output_pairs(model, x_train, num_pairs)
 
+
 main()
-
-
-
-
-
-
