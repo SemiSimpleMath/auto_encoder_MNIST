@@ -151,23 +151,6 @@ def display_random_training_image(x_train, model):
     plt.imshow(random_model_image_for_display)
     plt.show()
 
-
-def row_col_loss(x, x_hat, bs):
-    bs = x.shape[0]
-
-    a = x.reshape(bs, 28, 28)
-    b = x_hat.reshape(bs, 28, 28)
-
-    c = (a - b).sum(axis=1)
-    c = c.pow(2)
-    d = (a - b).sum(axis=0)
-    d = d.pow(2)
-    c = c.sum()
-    d = d.sum()
-
-    return c + d
-
-
 def train(model, opt, dl, num_epochs, bs):
     model.train()
     print(f"training for {num_epochs}")
