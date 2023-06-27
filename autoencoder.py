@@ -1,39 +1,28 @@
 import gzip
-import pickle
 import os
+import pickle
 import random
-
-import torch
+import matplotlib.pyplot as plt
+import numpy as np
 import torch.nn as nn
 from torch import tensor
-import torch.nn.functional as F
-import numpy as np
 from torch.utils.data import DataLoader, RandomSampler, TensorDataset
-import matplotlib.pyplot as plt
-import pandas as pd
-from sklearn.decomposition import PCA as sklearnPCA, PCA
+from sklearn.decomposition import PCA
+import torch
 
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
-"""
-This is an mnist auto-encoder.  The purpose is to visualize how ordinary auto-encoders have a latent
-space that is not regular.  This is why variational auto-encoders are needed.  
-
-"""
-
-# CONSTANTS #
-
-# This is the dimension of the bottle neck.  It is the most important parameter in AE
-bottle_neck_size = 36
+# CONSTANTS
+BOTTLE_NECK_SIZE = 36
 MNIST_PATH = './data/'
-MNIST_FILE = MNIST_PATH + "mnist.pkl.gz"
+MNIST_FILE = os.path.join(MNIST_PATH, "mnist.pkl.gz")
 
 
 def load_mnist():
     with gzip.open(MNIST_FILE, 'rb') as f:
         ((x_train, y_train), (x_valid, y_valid)) = pickle.load(f, encoding='latin-1')
 
-    x_train, y_train, x_valid, y_valid = map(tensor, (x_train, y_train, x_valid, y_valid))
+    x_train, y_train, x_valid, y_valid = [tensor(data) for data in (x_train, y_train, x_valid, y_valid)]
 
     # convert pixel values to be between 0 and 1
     x_train, x_valid = x_train / 255.0, x_valid / 255.0
@@ -51,41 +40,41 @@ class Model(nn.Module):
     def __init__(self, encoder_in_size, encoder_out_size, decoder_in_size, decoder_out_size):
         super(Model, self).__init__()
 
-        self.input_shape = None  # Store the input shape
+        self.input_shape = None
 
         # Encoder
         self.encoder = nn.Sequential(
             nn.Linear(encoder_in_size**2, 400),
-            nn.BatchNorm1d(400),  # Add BatchNorm layer
+            nn.BatchNorm1d(400),
             nn.LeakyReLU(),
-            nn.Dropout(p=0.5),  # Add Dropout layer
-            nn.Linear(400, 300),  # Add another Linear layer
-            nn.BatchNorm1d(300),  # Add BatchNorm layer
+            nn.Dropout(p=0.5),
+            nn.Linear(400, 300),
+            nn.BatchNorm1d(300),
             nn.LeakyReLU(),
-            nn.Dropout(p=0.5),  # Add Dropout layer
-            nn.Linear(300, encoder_out_size)  # Connect to bottleneck
+            nn.Dropout(p=0.5),
+            nn.Linear(300, encoder_out_size)
         )
 
         # Decoder
         self.decoder = nn.Sequential(
-            nn.Linear(decoder_in_size, 300),  # Connect from bottleneck
-            nn.BatchNorm1d(300),  # Add BatchNorm layer
+            nn.Linear(decoder_in_size, 300),
+            nn.BatchNorm1d(300),
             nn.LeakyReLU(),
-            nn.Dropout(p=0.5),  # Add Dropout layer
-            nn.Linear(300, 400),  # Add another Linear layer
-            nn.BatchNorm1d(400),  # Add BatchNorm layer
+            nn.Dropout(p=0.5),
+            nn.Linear(300, 400),
+            nn.BatchNorm1d(400),
             nn.LeakyReLU(),
-            nn.Dropout(p=0.5),  # Add Dropout layer
+            nn.Dropout(p=0.5),
             nn.Linear(400, decoder_out_size**2),
             nn.Sigmoid()
         )
 
     def forward(self, x):
         self.input_shape = x.shape
-        if x.size(0) == 1:  # Handle the single sample case
-            x = x.view(-1).unsqueeze(0).to(torch.float)  # Flatten the input data and add a new dimension
+        if x.size(0) == 1:
+            x = x.view(-1).unsqueeze(0).to(torch.float)
         else:
-            x = x.view(x.size(0), -1).to(torch.float)  # Flatten the input data
+            x = x.view(x.size(0), -1).to(torch.float)
         x = self.encoder(x)
         x = self.decoder(x)
         x = x.view(self.input_shape)
@@ -97,9 +86,6 @@ class Dataset:
     def __len__(self): return len(self.x)
     def __getitem__(self, i): return self.x[i], self.y[i]
 
-
-from sklearn.decomposition import PCA
-import torch
 
 class LatentSpaceVisualizer:
     def __init__(self, encoder, dataloader):
@@ -118,12 +104,11 @@ class LatentSpaceVisualizer:
         with torch.no_grad():
             for batch in self.dataloader:
                 x, y = batch
-                x = x.view(x.size(0), -1)  # Flattening the images
+                x = x.view(x.size(0), -1)
                 latent_vectors = self.encoder(x)
                 encoded_samples.append((latent_vectors.cpu().numpy(), y.cpu().numpy()))
         self.encoded_samples = encoded_samples
         print(f"Encoded samples: {len(self.encoded_samples)}")
-
 
     def apply_pca(self):
         X = np.concatenate([x for x, y in self.encoded_samples])
@@ -143,7 +128,6 @@ def get_random_image(img_data):
 
 
 def display_random_training_image(x_train, model):
-    # Lets pick a random image from the training set and see how untrained model reproduces it
     random_image = get_random_image(x_train)
     random_model_image = model(random_image)
 
@@ -151,7 +135,6 @@ def display_random_training_image(x_train, model):
 
     random_model_image_for_display = random_model_image.reshape(28, 28).detach().numpy()
     random_image.unsqueeze(0)
-    print(random_image.shape)
     plt.imshow(random_image_for_display)
     plt.show()
     plt.imshow(random_model_image_for_display)
@@ -181,7 +164,6 @@ def train(model, opt, dl, num_epochs):
                 running_loss = 0.0
 
 
-
 def convert_model_output_to_img(output):
     output = output.reshape(28, 28).detach().numpy()
     return output
@@ -192,10 +174,8 @@ def display_img(img):
     plt.show()
 
 def plot_input_output_pairs(model, input_data, num_pairs=5):
-    # Select random indices from the input data
     random_indices = torch.randint(low=0, high=len(input_data), size=(num_pairs,))
 
-    # Plot input-output pairs
     fig, axes = plt.subplots(nrows=num_pairs, ncols=2, figsize=(8, 2 * num_pairs))
     for i, idx in enumerate(random_indices):
         input_image = input_data[idx]
@@ -216,47 +196,49 @@ def main():
 
     x_train, y_train, x_valid, y_valid = load_mnist()
 
-    # Set here what digits you want to plot.  Plotting more than
-    # 3-4 digits will result in a mess
     train_filter = [0, 1, 2, 3]
     x_train, y_train = set_data_filters(train_filter, x_train, y_train)
 
     print(x_train.shape)
     print(y_train.shape)
 
-    # Set the dimensions of the encoder / decoder
     encoder_in_size = x_train.shape[1]
     print("encoder input size", encoder_in_size)
-    encoder_out_size = bottle_neck_size
-    decoder_in_size = bottle_neck_size
-    # decoder_out_size must be same as the encoder_in_size since we are trying to reconstruct the input
+    encoder_out_size = BOTTLE_NECK_SIZE
+    decoder_in_size = BOTTLE_NECK_SIZE
     decoder_out_size = encoder_in_size
 
     model = Model(encoder_in_size, encoder_out_size, decoder_in_size, decoder_out_size)
 
     print(model)
 
-    # Convert the training tensors to the appropriate datatypes
     x_train = x_train.to(torch.float)
     y_train = y_train.to(torch.long)
 
     train_ds, valid_ds = Dataset(x_train, y_train), Dataset(x_valid, y_valid)
 
-    # Batch size
     bs = 8
 
-    # Dataloader
     train_dl = DataLoader(train_ds, bs, sampler=RandomSampler(train_ds))
 
-    # Optimizer
     learning_rate = 1.e-3
     opt = torch.optim.Adam(model.parameters(), lr=learning_rate)
 
-    # Epochs
     epochs = 1
 
-    # Plot a random image from the training data and show how the
-    # decoder reproduces it
+    random_img = get_random_image(x_train)
+    random_img = random_img.unsqueeze(0)
+    print("random image shape", random_img.shape)
+    model.eval()
+    random_model_image = model(random_img)
+    random_model_image = convert_model_output_to_img(random_model_image)
+    random_img = random_img.reshape(28, 28).numpy()
+
+    display_img(random_img)
+    display_img(random_model_image)
+    model.train()
+    train(model, opt, train_dl, epochs)
+    model.eval()
     random_img = get_random_image(x_train)
     random_img = random_img.unsqueeze(0)
     print("random image shape", random_img.shape)
@@ -292,7 +274,8 @@ def main():
     num_pairs = 5
     plot_input_output_pairs(model, x_train, num_pairs)
 
-main()
+if __name__ == "__main__":
+    main()
 
 
 

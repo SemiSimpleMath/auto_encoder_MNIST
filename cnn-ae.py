@@ -35,7 +35,7 @@ def load_mnist():
     with gzip.open(MNIST_FILE, 'rb') as f:
         ((x_train, y_train), (x_valid, y_valid)) = pickle.load(f, encoding='latin-1')
 
-    x_train, y_train, x_valid, y_valid = map(tensor, (x_train, y_train, x_valid, y_valid))
+    x_train, y_train, x_valid, y_valid = [tensor(data) for data in (x_train, y_train, x_valid, y_valid)]
 
     # convert pixel values to be between 0 and 1
     x_train, x_valid = x_train / 255.0, x_valid / 255.0
